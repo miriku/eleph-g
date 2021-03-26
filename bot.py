@@ -32,53 +32,72 @@ async def new(ctx):
 async def on_reaction_add(reaction, user):
   emoji = reaction.emoji
   message = reaction.message
-  thisgame = ""
 
+  thisgame = -1 # placeholder value
+
+  # ignore if it's the bot reacting to its own posts
   if user.bot:
     return
 
+  # if someone clicked the green "sign up" checkmark
   if emoji == "✅":
-    thisGame=-1
+    # first figure out which game object this message connects to
     for game in games.values():
       if game.message.id == message.id: 
         thisgame = game
+
+    # bookmark TODO react to someone signing up
         
     if DEBUG:
-      print("Reaction to game:  ")
+      print("Reaction to game: ")
       print(game.text)
+    # ignore all other emoji
   else:
     return
 
 # main loop 
 @tasks.loop(seconds=10)
 async def mainLoop():
-  channel = discord.utils.get(bot.get_all_channels(), guild__name=OUTPUTSERVER, name=OUTPUTCHANNEL)
-  f = urlopen(URLOFLIST)
-  ls = f.readlines()
   line_data=[]
 
+  # find the channel object based on conf file
+  channel = discord.utils.get(bot.get_all_channels(), guild__name=OUTPUTSERVER, name=OUTPUTCHANNEL)
+
+  # read the data file of current games from webserver
+  f = urlopen(URLOFLIST)
+  ls = f.readlines()
+
+  # for each line of the web data file
   for l in ls:
+    # tab split
     line_data = l.decode("UTF-8").split("\\t")     
-    # is this a new game?
+    # is this a new game? we're checking by comparing the ids in the file to the ids in our local dict
     if not line_data[0] in games:
+      # yes, new game
       if DEBUG:
         print("initializing game", line_data)
-      # add it, first create a game object
+      # first we create a message object by sending the text to the discord
       message = await channel.send(line_data[1])
-      emoji = '✅'
-      await message.add_reaction(emoji)
+      # next post the interactable reaction
+      await message.add_reaction('✅')
+      # we then store that object inside the game object along with id, and text from web
       g = game.Game(line_data[0], message, line_data[1])
+      # store the newly created game object inside the games array, under the key of the game's id
       games[line_data[0]]=g
 
   # BOOKMARK TODO remove entries that are expired
 
-# performed once when the bot starts up
+# initialization routine performed once when the bot starts up
 @bot.event
 async def on_ready():
   if DEBUG:
     print("starting\n")
+  # find our channel, from conf file data
   channel = discord.utils.get(bot.get_all_channels(), guild__name=OUTPUTSERVER, name=OUTPUTCHANNEL)
+  # say hello
   await channel.send("Initializing")
+  # everything is online and ready. start the main loop process
   mainLoop.start()
 
+# start bot
 bot.run(TOKEN)
