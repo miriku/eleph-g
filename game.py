@@ -3,15 +3,31 @@ class Game:
   text = ""
   message = -1 
   owner = -1
-  maxPlayers = -1
+  ownerid = -1
+  playerswanted = -1
+  gamelength = -1
   currentPlayers = []
-  timeClose = -1
+  timetoclose = -1
   post = 0
 
-  def __init__(self, id, message, text):
+  def __init__(self, i):
     self.id = id
-    self.message = message
-    self.text = text
+    i = i.split("\t")
+    self.id=i[0]
+    self.text=i[1]
+    self.playerswanted=int(i[2])
+    self.gamelength=i[3]
+    self.ownerid=i[4]
 
-  def debug():
+  def setMessage(self, message):
+    self.message = message
+
+  def display(self):
+    output = "(" + self.id + ") "
+    output = output + self.text + " - "
+    output = output + "Needs " + str(self.playerswanted-len(self.currentPlayers)) + " more. "
+    output = output + "[[Timer code: " + str(self.timetoclose) + "]] "
+    return output
+
+  def debug(self):
     print("game")

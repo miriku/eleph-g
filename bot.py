@@ -17,7 +17,8 @@ DEBUG = os.getenv('DEBUG_LEVEL')
 
 bot = commands.Bot(command_prefix='!')
 
-# bot's state
+# the array of games that are currently looking for people and their states.
+# a game is defined by 
 games = {}
 
 # helper command: link to website with message
@@ -50,7 +51,7 @@ async def on_reaction_add(reaction, user):
         
     if DEBUG:
       print("Reaction to game: ")
-      print(game.text)
+      print(thisgame.text)
     # ignore all other emoji
   else:
     return
@@ -66,22 +67,38 @@ async def mainLoop():
   # read the data file of current games from webserver
   f = urlopen(URLOFLIST)
   ls = f.readlines()
-
+  
   # for each line of the web data file
   for l in ls:
+    
     # tab split
-    line_data = l.decode("UTF-8").split("\\t")     
+    line_data = l.decode("UTF-8").split("\\t")
+    
     # is this a new game? we're checking by comparing the ids in the file to the ids in our local dict
     if not line_data[0] in games:
+      
       # yes, new game
       if DEBUG:
         print("initializing game", line_data)
-      # first we create a message object by sending the text to the discord
-      message = await channel.send(line_data[1])
+      
+      # create a game object and pass along text from web for parsing
+      g = game.Game(l.decode("UTF-8"))
+      
+      # create output string to send to discord from the game object
+      outputString = g.display()
+
+      # tack on helpful guide
+      outputString = outputString + ". To join this game click the small ✅ below it."
+      
+      # now create a message object by sending the text to the discord
+      message = await channel.send(outputString)
+      
       # next post the interactable reaction
       await message.add_reaction('✅')
-      # we then store that object inside the game object along with id, and text from web
-      g = game.Game(line_data[0], message, line_data[1])
+
+      # finally let the game object know about the message object
+      g.setMessage(message)
+
       # store the newly created game object inside the games array, under the key of the game's id
       games[line_data[0]]=g
 
